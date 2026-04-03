@@ -1,0 +1,12 @@
+# Keil 个人配置文件
+*.uvguix.*
+*.uvoptx
+*.scvd
+
+# IDE 备份文件
+*.bak
+
+# 编译中间文件和输出文件
+**/Objects/
+**/Listings/
+**/DebugConfig/

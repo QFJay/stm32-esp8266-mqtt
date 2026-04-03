@@ -1,0 +1,12 @@
+#ifndef __APP_SCREEN_TYPE_H
+#define __APP_SCREEN_TYPE_H
+
+typedef enum
+{
+	SCREEN_TYPE_HUMIDITY = 0,
+	SCREEN_TYPE_TEMPERATURE,
+	SCREEN_TYPE_LIGHT,
+	SCREEN_TYPE_COUNT
+} ScreenType;
+
+#endif
