@@ -1,6 +1,7 @@
 #include "esp8266/app_esp8266.h"
 #include "esp8266/bsp_esp8266.h"
 #include "types/app_sensor_data.h"
+#include "types/app_publish_data.h"
 #include "led/bsp_led.h"
 #include "cmsis_os2.h"
 #include "FreeRTOS.h"
@@ -24,8 +25,9 @@
 #define MQTT_QOS								0
 
 extern osSemaphoreId_t ESP8266ReceiveSemaphoreHandle;
+extern osMessageQueueId_t ESP8266PackQueueHandle;
+extern osMessageQueueId_t ESP8266RespondQueueHandle;
 extern osMessageQueueId_t ESP8266SendQueueHandle;
-extern osMessageQueueId_t ESP8266ReceiveQueueHandle;
 
 extern uint8_t ESP8266_RxBuff[];
 extern uint16_t ESP8266_RxBuff_Size;
@@ -123,24 +125,31 @@ bool ESP8266_Preparation(void)
 	return true;
 }
 
-void StartESP8266SendTask(void *argument)
+void StartESP8266PackTask(void *argument)
 {
 	uint32_t payload_id = 1;
 
 	while (1)
 	{
-		char payload[200];
 		SensorData *sensor_data;
 
-		osMessageQueueGet(ESP8266SendQueueHandle, &sensor_data, 0, osWaitForever);
+		osMessageQueueGet(ESP8266PackQueueHandle, &sensor_data, 0, osWaitForever);
 
 		if (sensor_data->dht11_check_result == DHT11_DATA_OK)
 		{
-			snprintf(payload, sizeof(payload),
-				"{\\\"id\\\":\\\"%d\\\"\\,\\\"version\\\":\\\"1.0\\\"\\,\\\"params\\\":{\\\"humidity\\\":{\\\"value\\\":%.1f}\\,\\\"temperature\\\":{\\\"value\\\":%.1f}\\,\\\"light\\\":{\\\"value\\\":%.2f}}}",
-				payload_id++, sensor_data->humi_value, sensor_data->temp_value, sensor_data->light_percentage_value);
+			MQTTPublishData *publish_data = pvPortMalloc(sizeof(MQTTPublishData));
+			if (publish_data == NULL)
+			{
+				Error_Handler();
+			}
 
-			ESP8266_MQTTPublish(CONNECT_ID, MQTT_TOPIC_POST, payload, MQTT_QOS, false);
+			memcpy(publish_data->topic, MQTT_TOPIC_POST, sizeof(MQTT_TOPIC_POST));
+
+			snprintf(publish_data->payload, sizeof(publish_data->payload),
+				"{\\\"id\\\":\\\"%d\\\"\\,\\\"params\\\":{\\\"humidity\\\":{\\\"value\\\":%.1f}\\,\\\"temperature\\\":{\\\"value\\\":%.1f}\\,\\\"light\\\":{\\\"value\\\":%.2f}\\,\\\"LED\\\":{\\\"value\\\":%s}}}",
+			payload_id++, sensor_data->humi_value, sensor_data->temp_value, sensor_data->light_percentage_value, LED_IsOn(LED_ONBOARD) ? "true" : "false");
+
+			osMessageQueuePut(ESP8266SendQueueHandle, &publish_data, 0, osWaitForever);
 		}
 
 		vPortFree(sensor_data);
@@ -150,47 +159,80 @@ void StartESP8266SendTask(void *argument)
 
 void StartESP8266ReceiveTask(void *argument)
 {
+	char head[100];
+
+	snprintf(head, sizeof(head), "+MQTTSUBRECV:%d,\"%s\"", CONNECT_ID, MQTT_TOPIC_SET);
+
 	while (1)
 	{
 		osSemaphoreAcquire(ESP8266ReceiveSemaphoreHandle, osWaitForever);
 
-		char *message = pvPortMalloc(sizeof(char) * (ESP8266_RxBuff_Size + 1));
-
-		if (message != NULL)
+		if (strstr((char *)ESP8266_RxBuff, head) != NULL)
 		{
+			char *message = pvPortMalloc(sizeof(char) * (ESP8266_RxBuff_Size + 1));
+			if (message == NULL)
+			{
+				Error_Handler();
+			}
+
 			memcpy(message, ESP8266_RxBuff, ESP8266_RxBuff_Size);
 			message[ESP8266_RxBuff_Size] = '\0';
-			osMessageQueuePut(ESP8266ReceiveQueueHandle, &message, 0, osWaitForever);
+			osMessageQueuePut(ESP8266RespondQueueHandle, &message, 0, osWaitForever);
 		}
 	}
 }
 
 void StartESP8266RespondTask(void *argument)
 {
-//	uint32_t payload_id;
-	char head[15];
-
-	snprintf(head, sizeof(head), "+MQTTSUBRECV:%d", CONNECT_ID);
-
 	while (1)
 	{
 		char *message;
+		uint32_t payload_id;
 
-		osMessageQueueGet(ESP8266ReceiveQueueHandle, &message, 0, osWaitForever);
+		osMessageQueueGet(ESP8266RespondQueueHandle, &message, 0, osWaitForever);
+		char *json_start = strstr(message, "{");
 
-		if (strstr(message, head) != NULL)
+		if (json_start != NULL)
 		{
-			if (strstr(message, "\"LED\":true") != NULL)
+			if (sscanf(json_start, "{\"id\":\"%d\"", &payload_id) == 1)
 			{
-				LED_On(LED_ONBOARD);
-			}
-			else if (strstr(message, "\"LED\":false") != NULL)
-			{
-				LED_Off(LED_ONBOARD);
+				MQTTPublishData *publish_data = pvPortMalloc(sizeof(MQTTPublishData));
+				if (publish_data == NULL)
+				{
+					Error_Handler();
+				}
+
+				memcpy(publish_data->topic, MQTT_TOPIC_SET_REPLY, sizeof(MQTT_TOPIC_SET_REPLY));
+				snprintf(publish_data->payload, sizeof(publish_data->payload), "{\\\"id\\\":\\\"%d\\\"\\,\\\"code\\\":200\\,\\\"msg\\\":\\\"success\\\"}", payload_id);
+				osMessageQueuePut(ESP8266SendQueueHandle, &publish_data, 0, osWaitForever);
+
+				if (strstr(json_start, "\"LED\":true") != NULL)
+				{
+					LED_On(LED_ONBOARD);
+				}
+				else if (strstr(json_start, "\"LED\":false") != NULL)
+				{
+					LED_Off(LED_ONBOARD);
+				}
 			}
 		}
 
 		vPortFree(message);
 		message = NULL;
+	}
+}
+
+void StartESP8266SendTask(void *argument)
+{
+	while (1)
+	{
+		MQTTPublishData *publish_data;
+
+		osMessageQueueGet(ESP8266SendQueueHandle, &publish_data, 0, osWaitForever);
+
+		ESP8266_MQTTPublish(CONNECT_ID, publish_data->topic, publish_data->payload, MQTT_QOS, false);
+
+		vPortFree(publish_data);
+		publish_data = NULL;
 	}
 }

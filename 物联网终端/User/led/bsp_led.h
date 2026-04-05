@@ -16,5 +16,6 @@ void LED_Init(void);
 void LED_On(LEDId id);
 void LED_Off(LEDId id);
 void LED_Toggle(LEDId id);
+bool LED_IsOn(LEDId id);
 
 #endif

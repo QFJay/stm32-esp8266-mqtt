@@ -12,15 +12,15 @@ static void OLED_DisplayHumidity(void)
 
 	if (global_display_data.dht11_check_result == DHT11_DATA_OK)
 	{
-		OLED_Printf(0, 16, OLED_8X16, "Now: %+07.3f %%RH", global_display_data.humi_value);
+		OLED_Printf(0, 16, OLED_8X16, "Now: %06.3f %%RH", global_display_data.humi_value);
 	}
 	else
 	{
 		OLED_ShowString(0, 16, "Now: DATA ERROR", OLED_8X16);
 	}
 
-	OLED_Printf(0, 32, OLED_8X16, "Max: %+07.3f %%RH", global_display_data.humi_max);
-	OLED_Printf(0, 48, OLED_8X16, "Min: %+07.3f %%RH", global_display_data.humi_min);
+	OLED_Printf(0, 32, OLED_8X16, "Max: %06.3f %%RH", global_display_data.humi_max);
+	OLED_Printf(0, 48, OLED_8X16, "Min: %06.3f %%RH", global_display_data.humi_min);
 }
 
 static void OLED_DisplayTemperature(void)

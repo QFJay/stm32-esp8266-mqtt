@@ -62,3 +62,8 @@ void LED_Toggle(LEDId id)
 
 	HAL_GPIO_TogglePin(LED_configs[id].port, LED_configs[id].pin);
 }
+
+bool LED_IsOn(LEDId id)
+{
+	return (HAL_GPIO_ReadPin(LED_configs[id].port, LED_configs[id].pin) == LED_configs[id].on_level);
+}
