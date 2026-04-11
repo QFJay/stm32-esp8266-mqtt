@@ -38,49 +38,96 @@
 	export default {
 		data() {
 			return {
-				humidity: '',
-				temperature: '',
-				light: '',
+				// 设备数据
+				humidity: '--',
+				temperature: '--',
+				light: '--',
 				LED: false,
-				token: ''
+
+				// 轮询定时器
+				pollingTimer: null,
+
+				// API 配置
+				apiConfig: {
+					productId: 'Roh7b244ZQ',
+					deviceName: 'device1',
+					token: ''
+				}
 			}
 		},
 		onLoad() {
+			// 生成 token
 			const params = {
 				access_key: 'LTm7Q03VJVF9w/uf0e+zWRUxZR+1FeEtx8E9a3VPyw8=',
 				version: '2022-05-01',
-				productid: 'Roh7b244ZQ'
-			}
-
-			this.token = createCommonToken(params);
+				productid: this.apiConfig.productId
+			};
+			this.apiConfig.token = createCommonToken(params)
 		},
 		onShow() {
-			// this.fetchDeviceData();
-			setInterval(()=>{
-				this.fetchDeviceData();
-			}, 2000)
+			// 页面显示时：立即获取一次，然后开始轮询
+			this.fetchDeviceData();
+			this.startPolling()
+		},
+		onHide() {
+			// 页面隐藏时：停止轮询（节省资源）
+			this.stopPolling()
+		},
+		onUnload() {
+			// 页面卸载时：彻底清除定时器
+			this.stopPolling()
 		},
 		methods: {
+			// 开始轮询（每2秒获取一次）
+			startPolling() {
+				this.stopPolling();
+				this.pollingTimer = setInterval(() => {
+					this.fetchDeviceData()
+				}, 2000)
+			},
+
+			// 停止轮询
+			stopPolling() {
+				if (this.pollingTimer) {
+					clearInterval(this.pollingTimer);
+					this.pollingTimer = null
+				}
+			},
+
+			// 获取设备最新数据
 			fetchDeviceData() {
 				uni.request({
 					url: 'https://iot-api.heclouds.com/thingmodel/query-device-property',
 					method: 'GET',
 					data: {
-						product_id: 'Roh7b244ZQ',
-						device_name: 'device1'
+						product_id: this.apiConfig.productId,
+						device_name: this.apiConfig.deviceName
 					},
 					header: {
-						'authorization': this.token
+						'authorization': this.apiConfig.token
 					},
 					success: (res) => {
-						console.log(res.data);
-						this.humidity = res.data.data[1].value;
-						this.temperature = res.data.data[3].value;
-						this.light = res.data.data[2].value;
-						this.LED = (res.data.data[0].value === "true");
+						if (res.data && res.data.data) {
+							console.log(res.data);
+
+							const getValue = (id) => {
+								const item = res.data.data.find(item => item.identifier === id);
+								return item ? item.value : '--'
+							};
+
+							this.humidity = getValue('humidity');
+							this.temperature = getValue('temperature');
+							this.light = getValue('light');
+							this.LED = (getValue('LED') === 'true')
+						}
+					},
+					fail: (err) => {
+						console.error('获取数据失败', err)
 					}
-				});
+				})
 			},
+
+			// 控制 LED 开关
 			onLEDSwitch(event) {
 				let LED_value = event.detail.value;
 
@@ -88,19 +135,26 @@
 					url: 'https://iot-api.heclouds.com/thingmodel/set-device-property',
 					method: 'POST',
 					data: {
-						product_id: 'Roh7b244ZQ',
-						device_name: 'device1',
+						product_id: this.apiConfig.productId,
+						device_name: this.apiConfig.deviceName,
 						params: {
-							"LED": LED_value
+							LED: LED_value
 						}
 					},
 					header: {
-						'authorization': this.token
+						'authorization': this.apiConfig.token
 					},
 					success: () => {
-						console.log('LED ' + (LED_value ? 'on' : 'off'));
+						console.log('LED ' + (LED_value ? '开启' : '关闭'))
+					},
+					fail: (err) => {
+						console.error('控制 LED 失败', err);
+						uni.showToast({
+							title: '控制失败，请检查网络',
+							icon: 'none'
+						})
 					}
-				});
+				})
 			}
 		}
 	}
