@@ -1,7 +1,7 @@
 {
-    "name" : "Generate_Token",
-    "appid" : "",
-    "description" : "",
+    "name" : "环境监测系统",
+    "appid" : "__UNI__71C5D59",
+    "description" : "环境监测系统的手机APP",
     "versionName" : "1.0.0",
     "versionCode" : "100",
     "transformPx" : false,
@@ -41,7 +41,9 @@
                 ]
             },
             /* ios打包配置 */
-            "ios" : {},
+            "ios" : {
+                "dSYMs" : false
+            },
             /* SDK配置 */
             "sdkConfigs" : {}
         }
