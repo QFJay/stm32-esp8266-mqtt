@@ -2,6 +2,7 @@
 #include "esp8266/bsp_esp8266.h"
 #include "types/app_sensor_data.h"
 #include "types/app_publish_data.h"
+#include "oled/bsp_i2c_oled.h"
 #include "led/bsp_led.h"
 #include "cmsis_os2.h"
 #include "FreeRTOS.h"
@@ -22,7 +23,6 @@
 #define MQTT_TOPIC_POST_REPLY		"$sys/Roh7b244ZQ/device1/thing/property/post/reply"
 #define MQTT_TOPIC_SET					"$sys/Roh7b244ZQ/device1/thing/property/set"
 #define MQTT_TOPIC_SET_REPLY		"$sys/Roh7b244ZQ/device1/thing/property/set_reply"
-#define MQTT_QOS								0
 
 extern osSemaphoreId_t ESP8266ReceiveSemaphoreHandle;
 extern osMessageQueueId_t ESP8266PackQueueHandle;
@@ -38,11 +38,23 @@ bool ESP8266_Preparation(void)
 
 	ESP8266_Init();
 	printf(">>> ESP8266 has been initialized and is now ready to receive...\r\n");
+	OLED_ClearArea(0, 0, 128, 48);
+	OLED_ShowString(0, 0, "[1/9] OK", OLED_8X16);
+	OLED_ShowString(0, 16, "ESP8266 Init", OLED_8X16);
+	OLED_Update();
+	HAL_Delay(300);
 
 	printf(">>> ESP8266 is undergoing software reset...\r\n");
+	OLED_ClearArea(0, 0, 128, 48);
+	OLED_ShowString(0, 0, "[2/9]", OLED_8X16);
+	OLED_ShowString(0, 16, "ESP8266 Reset", OLED_8X16);
+	OLED_Update();
 	if (ESP8266_SoftReset_WaitReady() == true)
 	{
 		printf(">>> ESP8266 has been reset.\r\n");
+		OLED_ShowString(48, 0, "OK", OLED_8X16);
+		OLED_Update();
+		HAL_Delay(300);
 	}
 	else
 	{
@@ -50,9 +62,16 @@ bool ESP8266_Preparation(void)
 		return false;
 	}
 
+	OLED_ClearArea(0, 0, 128, 48);
+	OLED_ShowString(0, 0, "[3/9]", OLED_8X16);
+	OLED_ShowString(0, 16, "ESP8266 Test", OLED_8X16);
+	OLED_Update();
 	if (ESP8266_Test() == true)
 	{
 		printf(">>> ESP8266 has passed the test.\r\n");
+		OLED_ShowString(48, 0, "OK", OLED_8X16);
+		OLED_Update();
+		HAL_Delay(300);
 	}
 	else
 	{
@@ -60,9 +79,17 @@ bool ESP8266_Preparation(void)
 		return false;
 	}
 
+	OLED_ClearArea(0, 0, 128, 48);
+	OLED_ShowString(0, 0, "[4/9]", OLED_8X16);
+	OLED_ShowString(0, 16, "ESP8266 Set To", OLED_8X16);
+	OLED_ShowString(0, 32, "STA Mode", OLED_8X16);
+	OLED_Update();
 	if (ESP8266_SetNetMode(STA) == true)
 	{
 		printf(">>> ESP8266 has been set to STA mode.\r\n");
+		OLED_ShowString(48, 0, "OK", OLED_8X16);
+		OLED_Update();
+		HAL_Delay(300);
 	}
 	else
 	{
@@ -70,9 +97,17 @@ bool ESP8266_Preparation(void)
 		return false;
 	}
 
+	OLED_ClearArea(0, 0, 128, 48);
+	OLED_ShowString(0, 0, "[5/9]", OLED_8X16);
+	OLED_ShowString(0, 16, "ESP8266 Connect", OLED_8X16);
+	OLED_ShowString(0, 32, "Wi-Fi", OLED_8X16);
+	OLED_Update();
 	if (ESP8266_ConnectWifi(ESP8266_AP_SSID, ESP8266_AP_PWD) == CONNECT_OK)
 	{
 		printf(">>> Wi-Fi connected.\r\n");
+		OLED_ShowString(48, 0, "OK", OLED_8X16);
+		OLED_Update();
+		HAL_Delay(300);
 	}
 	else
 	{
@@ -80,9 +115,17 @@ bool ESP8266_Preparation(void)
 		return false;
 	}
 
+	OLED_ClearArea(0, 0, 128, 48);
+	OLED_ShowString(0, 0, "[6/9]", OLED_8X16);
+	OLED_ShowString(0, 16, "Config MQTT User", OLED_8X16);
+	OLED_ShowString(0, 32, "Information", OLED_8X16);
+	OLED_Update();
 	if (ESP8266_ConfigMQTTUser(CONNECT_ID, true, DEVICE_NAME, PRODUCT_ID, TOKEN) == true)
 	{
 		printf(">>> MQTT user information configured successfully.\r\n");
+		OLED_ShowString(48, 0, "OK", OLED_8X16);
+		OLED_Update();
+		HAL_Delay(300);
 	}
 	else
 	{
@@ -90,9 +133,17 @@ bool ESP8266_Preparation(void)
 		return false;
 	}
 
+	OLED_ClearArea(0, 0, 128, 48);
+	OLED_ShowString(0, 0, "[7/9]", OLED_8X16);
+	OLED_ShowString(0, 16, "ESP8266 Connect", OLED_8X16);
+	OLED_ShowString(0, 32, "MQTT Server", OLED_8X16);
+	OLED_Update();
 	if (ESP8266_ConnectMQTTServer(MQTT_SERVER_IP, MQTT_SERVER_PORT, CONNECT_ID, true) == true)
 	{
 		printf(">>> Connected to the MQTT server successfully.\r\n");
+		OLED_ShowString(48, 0, "OK", OLED_8X16);
+		OLED_Update();
+		HAL_Delay(300);
 	}
 	else
 	{
@@ -100,9 +151,17 @@ bool ESP8266_Preparation(void)
 		return false;
 	}
 
-	if (ESP8266_MQTTSubscribe(CONNECT_ID, MQTT_TOPIC_POST_REPLY, MQTT_QOS) == true)
+	OLED_ClearArea(0, 0, 128, 48);
+	OLED_ShowString(0, 0, "[8/9]", OLED_8X16);
+	OLED_ShowString(0, 16, "Subscribe Topic", OLED_8X16);
+	OLED_ShowString(0, 32, "\"post/reply\"", OLED_8X16);
+	OLED_Update();
+	if (ESP8266_MQTTSubscribe(CONNECT_ID, MQTT_TOPIC_POST_REPLY, MQTT_QOS_0) == true)
 	{
 		printf(">>> Subscribed to MQTT topic \"post/reply\" successfully.\r\n");
+		OLED_ShowString(48, 0, "OK", OLED_8X16);
+		OLED_Update();
+		HAL_Delay(300);
 	}
 	else
 	{
@@ -110,9 +169,17 @@ bool ESP8266_Preparation(void)
 		return false;
 	}
 
-	if (ESP8266_MQTTSubscribe(CONNECT_ID, MQTT_TOPIC_SET, MQTT_QOS) == true)
+	OLED_ClearArea(0, 0, 128, 48);
+	OLED_ShowString(0, 0, "[9/9]", OLED_8X16);
+	OLED_ShowString(0, 16, "Subscribe Topic", OLED_8X16);
+	OLED_ShowString(0, 32, "\"set\"", OLED_8X16);
+	OLED_Update();
+	if (ESP8266_MQTTSubscribe(CONNECT_ID, MQTT_TOPIC_SET, MQTT_QOS_0) == true)
 	{
 		printf(">>> Subscribed to MQTT topic \"set\" successfully.\r\n\r\n");
+		OLED_ShowString(48, 0, "OK", OLED_8X16);
+		OLED_Update();
+		HAL_Delay(300);
 	}
 	else
 	{
@@ -230,7 +297,7 @@ void StartESP8266SendTask(void *argument)
 
 		osMessageQueueGet(ESP8266SendQueueHandle, &publish_data, 0, osWaitForever);
 
-		ESP8266_MQTTPublish(CONNECT_ID, publish_data->topic, publish_data->payload, MQTT_QOS, false);
+		ESP8266_MQTTPublish(CONNECT_ID, publish_data->topic, publish_data->payload, MQTT_QOS_0, false);
 
 		vPortFree(publish_data);
 		publish_data = NULL;

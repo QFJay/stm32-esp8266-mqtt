@@ -31,6 +31,13 @@ typedef enum
 	TRANSPARENT_ON = 1
 } TransparentModeTypeDef;
 
+typedef enum
+{
+	MQTT_QOS_0 = 0,
+	MQTT_QOS_1 = 1,
+	MQTT_QOS_2 = 2
+} MQTTQosTypeDef;
+
 void ESP8266_GPIO_Init(void);
 void ESP8266_Reset(void);
 void UART_StartReceive(void);
@@ -44,8 +51,8 @@ bool ESP8266_SetConnMode(ConnModeTypeDef mode);
 ConnWifiStateTypeDef ESP8266_ConnectWifi(const char *ssid, const char *password);
 bool ESP8266_ConfigMQTTUser(uint8_t conn_id, bool enable_ssl_tls, const char *device_name, const char *product_id, const char *token);
 bool ESP8266_ConnectMQTTServer(const char *ip, uint16_t port, uint8_t conn_id, bool enable_auto_reconnect);
-bool ESP8266_MQTTSubscribe(uint8_t conn_id, const char *topic, uint8_t qos);
-bool ESP8266_MQTTPublish(uint8_t conn_id, const char *topic, const char *payload, uint8_t qos, bool enable_retain);
+bool ESP8266_MQTTSubscribe(uint8_t conn_id, const char *topic, MQTTQosTypeDef qos);
+bool ESP8266_MQTTPublish(uint8_t conn_id, const char *topic, const char *payload, MQTTQosTypeDef qos, bool enable_retain);
 void ESP8266_EnablePrintResponse(void);
 
 #endif

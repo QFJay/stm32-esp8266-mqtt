@@ -353,18 +353,12 @@ bool ESP8266_ConnectMQTTServer(const char *ip, uint16_t port, uint8_t conn_id, b
 	return false;
 }
 
-bool ESP8266_MQTTSubscribe(uint8_t conn_id, const char *topic, uint8_t qos)
+bool ESP8266_MQTTSubscribe(uint8_t conn_id, const char *topic, MQTTQosTypeDef qos)
 {
 	char cmd[128];
 
 	/* conn_id range: 0 ~ 4 */
 	if (conn_id > 4)
-	{
-		return false;
-	}
-
-	/* qos range: 0 ~ 2 */
-	if (qos > 2)
 	{
 		return false;
 	}
@@ -381,18 +375,12 @@ bool ESP8266_MQTTSubscribe(uint8_t conn_id, const char *topic, uint8_t qos)
 	return true;
 }
 
-bool ESP8266_MQTTPublish(uint8_t conn_id, const char *topic, const char *payload, uint8_t qos, bool enable_retain)
+bool ESP8266_MQTTPublish(uint8_t conn_id, const char *topic, const char *payload, MQTTQosTypeDef qos, bool enable_retain)
 {
 	char cmd[256];
 
 	/* conn_id range: 0 ~ 4 */
 	if (conn_id > 4)
-	{
-		return false;
-	}
-
-	/* qos range: 0 ~ 2 */
-	if (qos > 2)
 	{
 		return false;
 	}

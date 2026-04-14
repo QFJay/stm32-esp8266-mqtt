@@ -37,25 +37,12 @@ int main(void)
 
 	Light_Init();
 
-	uint8_t retry = 0;
-	OLED_Printf(0, 0, OLED_8X16, "ESP8266 is being");
-	OLED_Printf(0, 16, OLED_8X16, "prepared...");
-	OLED_Update();
+	uint16_t retry = 0;
 	while (ESP8266_Preparation() == false)
 	{
 		retry++;
-		if (retry > 3)
-		{
-			OLED_Clear();
-			OLED_Printf(0, 0, OLED_8X16, "An error");
-			OLED_Printf(0, 16, OLED_8X16, "occurred in the");
-			OLED_Printf(0, 32, OLED_8X16, "preparation of");
-			OLED_Printf(0, 48, OLED_8X16, "the ESP8266!");
-			OLED_Update();
-			while (1);
-		}
 		OLED_ClearArea(0, 48, 128, 16);
-		OLED_Printf(0, 32, OLED_8X16, "Retry * %d", retry);
+		OLED_Printf(0, 48, OLED_8X16, "(Retry * %d)", retry);
 		OLED_Update();
 	}
 
